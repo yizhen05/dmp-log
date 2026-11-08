@@ -80,3 +80,8 @@ create policy "own aliases" on public.aliases
   for all to authenticated
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
+
+-- Data API（supabase-js）からはログイン中のユーザーだけが触れるようにする。
+-- プロジェクト作成時に「Automatically expose new tables」を外していても、これで動きます。
+revoke all on public.seasons, public.entries, public.aliases from anon;
+grant select, insert, update, delete on public.seasons, public.entries, public.aliases to authenticated;
