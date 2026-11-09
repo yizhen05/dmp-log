@@ -4,9 +4,10 @@ import { SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 
 // ログインしていなければ /login へ。セッションの更新もここで行う
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/api/env-check")) return NextResponse.next();
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return new NextResponse(
-      "環境変数 NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY（または NEXT_PUBLIC_SUPABASE_ANON_KEY）が設定されていません。Vercel の Settings → Environment Variables で設定して、Redeploy してください。",
+      "環境変数 NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY（または NEXT_PUBLIC_SUPABASE_ANON_KEY）が設定されていません。Vercel の Settings → Environment Variables で設定して、Redeploy してください。\n\n設定の確認：/api/env-check",
       { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } },
     );
   }
