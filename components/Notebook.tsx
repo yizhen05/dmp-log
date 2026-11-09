@@ -13,6 +13,8 @@ import {
   aliasOrg,
   aliasVenue,
   calcPt,
+  cleanNote,
+  medal,
   displayName,
   group,
   inFrame,
@@ -312,7 +314,8 @@ export default function Notebook(props: {
                                 {e.venue}
                               </>
                             )}
-                            {e.note && ` ${e.note}`}
+                            {medal(e.rank) && ` ${medal(e.rank)}`}
+                            {cleanNote(e.note) && ` ${cleanNote(e.note)}`}
                           </div>
                           {sub && <small>{sub}</small>}
                         </div>
@@ -443,10 +446,10 @@ export default function Notebook(props: {
               <DataList id="dl-deck" items={uniq((e) => e.deck)} />
             </div>
             <div className="f">
-              <label>メモ（任意）</label>
+              <label>メモ（任意）{medal(form.rank) && `　順位から ${medal(form.rank)} を自動で表示します`}</label>
               <input value={form.note} onChange={(e) => set({ note: e.target.value })} />
               <div className="chips">
-                {["🥇", "🥈", "ベスト4", "ベスト8"].map((c) => (
+                {["ベスト8", "ベスト16"].map((c) => (
                   <button key={c} type="button" onClick={() => !form.note.includes(c) && set({ note: form.note + c })}>
                     {c}
                   </button>

@@ -71,6 +71,12 @@ export function weekLabel(k: string): string {
 export const shortDate = (ds: string | null) =>
   ds ? `${Number(ds.slice(5, 7))}/${Number(ds.slice(8, 10))}` : "";
 
+/* ---------- 順位のメダル ---------- */
+export const medal = (rank: number | null) =>
+  rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 || rank === 4 ? "🥉" : "";
+/** メモに手で入れたメダルは順位から自動で出すので、表示のときは外す */
+export const cleanNote = (note: string) => note.replace(/[🥇🥈🥉]/gu, "").trim();
+
 /* ---------- 勝敗 ---------- */
 export const known = (e: Entry) => typeof e.wins === "number" && typeof e.losses === "number";
 export const rate = (w: number, l: number) => (w + l ? `${Math.round((w / (w + l)) * 1000) / 10}%` : "-");
@@ -257,7 +263,8 @@ export function memoText(season: Season, es: Entry[]): string {
         (known(e) ? ` ${e.wins}-${e.losses}` : "") +
         (e.rank ? ` ${e.rank}位` : "") +
         (e.pt > 0 ? ` ${e.pt}pt` : "") +
-        (e.note || "") +
+        medal(e.rank) +
+        (cleanNote(e.note) ? ` ${cleanNote(e.note)}` : "") +
         (e.deck ? ` [${e.deck}]` : "") +
         "\n";
   }
