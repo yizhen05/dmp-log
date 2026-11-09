@@ -104,6 +104,18 @@ export default function Notebook(props: {
     ok("設定を保存しました");
   }
 
+  async function deleteSeason() {
+    if (!season) return;
+    const { error } = await supabase.from("seasons").delete().eq("id", season.id);
+    if (error) return fail("シーズンの削除", error);
+    const rest = seasons.filter((s) => s.id !== season.id);
+    setSeasons(rest);
+    setEntries(entries.filter((e) => e.season_id !== season.id));
+    setCurId(rest.at(-1)?.id ?? "");
+    setTab("log");
+    ok(`「${season.name}」を削除しました`);
+  }
+
   /* ---------- 記録 ---------- */
   async function saveEntry() {
     if (!form || !season) return;
@@ -166,19 +178,24 @@ export default function Notebook(props: {
     setBusy(true);
     const base = Math.max(-1, ...seasons.map((s) => s.sort)) + 1;
     for (const [i, s] of parsed.seasons.entries()) {
-      const { data, error } = await supabase
-        .from("seasons")
-        .insert({ name: s.name, top_n: s.top_n, sort: base + i })
-        .select("id")
-        .single();
-      if (error) {
-        setBusy(false);
-        return fail("取り込み", error);
+      // 同じ名前のシーズンがあればそこに追加する（重複して作らない）
+      let seasonId = seasons.find((x) => x.name === s.name)?.id;
+      if (!seasonId) {
+        const { data, error } = await supabase
+          .from("seasons")
+          .insert({ name: s.name, top_n: s.top_n, sort: base + i })
+          .select("id")
+          .single();
+        if (error) {
+          setBusy(false);
+          return fail("取り込み", error);
+        }
+        seasonId = data.id as string;
       }
       if (s.entries.length) {
         const { error: e2 } = await supabase
           .from("entries")
-          .insert(s.entries.map((e) => ({ ...e, season_id: data.id })));
+          .insert(s.entries.map((e) => ({ ...e, season_id: seasonId })));
         if (e2) {
           setBusy(false);
           return fail("取り込み", e2);
@@ -334,11 +351,13 @@ export default function Notebook(props: {
 
           {tab === "more" && (
             <More
+              key={season.id}
               season={season}
               es={es}
               aliases={aliases}
               userLabel={props.userLabel}
               onSaveSeason={updateSeason}
+              onDeleteSeason={deleteSeason}
               onNewSeason={addSeason}
               onDeleteAlias={deleteAlias}
               onImport={importLegacy}
@@ -598,6 +617,7 @@ function More(props: {
   aliases: Alias[];
   userLabel: string;
   onSaveSeason: (name: string, topN: number) => void;
+  onDeleteSeason: () => void;
   onNewSeason: (name: string) => void;
   onDeleteAlias: (a: Alias) => void;
   onImport: (j: string) => void;
@@ -607,6 +627,7 @@ function More(props: {
   const [topN, setTopN] = useState(String(props.season.top_n));
   const [newName, setNewName] = useState("");
   const [json, setJson] = useState("");
+  const [delArm, setDelArm] = useState(false);
   const sorted = [...props.aliases].sort((a, b) => a.kind.localeCompare(b.kind) || a.raw.localeCompare(b.raw));
   return (
     <>
@@ -648,6 +669,16 @@ function More(props: {
         </div>
       </div>
 
+      <h3>このシーズンを削除</h3>
+      <div className="card">
+        <p className="muted" style={{ marginTop: 0 }}>
+          「{props.season.name}」と、その中の記録{props.es.length}件をすべて削除します。元に戻せません。
+        </p>
+        <button className="btn d" onClick={() => (delArm ? props.onDeleteSeason() : setDelArm(true))}>
+          {delArm ? `本当に削除（${props.es.length}件）` : "削除する"}
+        </button>
+      </div>
+
       <h3>新しいシーズン</h3>
       <div className="card">
         <div className="f">
@@ -661,7 +692,7 @@ function More(props: {
       <h3>前のツールから取り込む</h3>
       <div className="card">
         <p className="muted" style={{ marginTop: 0 }}>
-          前のツールのバックアップを貼ると、シーズンを追加して取り込みます（今のデータは消えません）。
+          前のツールのバックアップを貼ると取り込みます。同じ名前のシーズンがあればそこに追加し、なければ新しく作ります（今のデータは消えません）。
         </p>
         <textarea value={json} onChange={(e) => setJson(e.target.value)} rows={3} />
         <div className="btns">
